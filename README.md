@@ -1,6 +1,7 @@
 # 高性能MySQL
 ### MySQL Dev Doc
-- [8.0.12](https://dev.mysql.com/doc/dev/mysql-server/latest/)
+- [8.0.12 for deve](https://dev.mysql.com/doc/dev/mysql-server/latest/)
+- [8.0.12 for user](https://dev.mysql.com/doc/refman/8.0/en/)
 
 ### 在线表结构修改
 - pt-osc
