@@ -1,0 +1,41 @@
+一.undo存储管理
+1.innodb存储引擎对undo的管理同样采用段的方式。
+每个rollback segment 包含1024个undo log segment，事务再每个undo log segment中进行undo页的申请。
+
+2.innodb1.2开始，可以通过下面参数对rollback segment做进一步的设置:
+innodb_undo_directory    #undo表空间存放目录
+innodb_undo_logs         #设置rollback segment的个数
+innodb_undo_tablespaces  #设置构成rollback segment文件的数量，这样可以较为平均的分布在多个文件中
+innodb_undo_log_truncate #参数设置为1，即开启在线回收（收缩）undo log日志文件，支持动态设置
+innodb_max_undo_log_size    #当undo表空间超过该参数设定时，会标记为truncation，选择一个undo表空间进行截断
+innodb_purge_rseg_truncate_frequency     #undo 表空间一般不能直接truncate，需要在所有回滚段释放完后，才能truncate， purge system每128次释放一次回滚段，可以通过参数
+
+3.事务在undo log segment分配页写入undo log的过程同样需要写入重做日志，当事务提交时，innodb会做以下两件事:
+-将undo log放入列表，以供以后的purge操作
+-判断undo log 所在页是否可以重用，若可以则分配给下个事务使用
+
+二.undo log格式
+1.insert undo log
+指在insert操作中产生的undo log，因为insert操作的记录只对事务本身可见。因此该undo log在事务提交后直接删除，不需要进行purge操作。
+
+2.update undo log
+记录的是对delete和update操作产生的undo log，该log需要提供mvcc机制，因此不能在事务提交时就进行删除。提交时放入undo log链表，等待purge线程进行清除。
+
+三.查看undo信息
+1.查看rollback segment所在页
+select segment_id,space,page_no from information_schema.innodb_trx_rollback_segment;
+
+2.记录事务对应的undo log信息
+select * from information_schema.INNODB_TRX_UNDO\G;
+
+四.purge 机制
+
+purge用来最终完成delete和update操作。
+
+全局动态参数innodb_purge_batch_size用来设置每次purge操作需要清理的undo page数量。默认值为300
+
+全局动态参数innodb_max_purge_lag用来控制history list的长度，若大于该参数时，其会延缓DML的操作
+
+全局动态参数innodb_max_purge_lag_delay,用来控制DML操作每行数据的最大延缓时间，单位为毫秒。
+
+
