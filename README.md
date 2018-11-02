@@ -13,7 +13,7 @@
 
 
 ### 索引
-- [mysql ](https://github.com/meacial/mysql-tech/blob/master/docs/indexes)
+- [mysql index](https://github.com/meacial/mysql-tech/blob/master/docs/indexes)
 
 
 ### Event and Trigger
