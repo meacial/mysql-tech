@@ -8,6 +8,9 @@
 - pt-osc
 - on-line ddl
 
+### INNODB Engine
+- [mysql undo 原理](https://github.com/meacial/mysql-tech/blob/master/docs/mysql%20undo%E5%8E%9F%E7%90%86)
+
 
 ### Event and Trigger
 #### links
