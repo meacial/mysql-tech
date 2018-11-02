@@ -1,0 +1,201 @@
+首先建立一张测试使用的表：
+CREATE TABLE`test_innodb_lock` (
+  `a` int(11) DEFAULT NULL,
+  `b` varchar(16) DEFAULT NULL,
+  KEY `test_innodb_lock_a_IDX` (`a`)
+) ENGINE=InnoDB
+然后再往这张表里插入一些数据，以备使用，最终表数据如下：
++------+------+
+| a  | b    |
++------+------+
+|  1 | a    |
+|  1 | x    |
+|  1 | y    |
+|  2 | b    |
+|  2 | w    |
+|  2 | z    |
+|  3 | c    |
+|  4 | d    |
+|  5 | e    |
+|  8 | ff  |
+|  8 | f    |
+|  10 | g    |
++------+------+
+首先我们来看看行级锁的情况：
+实验一：
+打开两个MySQL客户端，
+在客户端1执行:
+mysql> set autocommit = 0;
+Query OK, 0 rows affected (0.00 sec)
+修改客户端1的事务提交方式为手动提交；
+在客户端2执行：
+mysql> set autocommit = 0;
+Query OK, 0 rows affected (0.00 sec)
+同样修改客户端2的事务提交方式为手动提交；
+在客户端1执行：
+mysql> update test_innodb_lock set b ='xxx' where  a = 1 and b = 'y';
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1 Warnings: 0
+同时使用索引字段a和非索引字段b更新一条数据；
+在客户端2执行：
+mysql> update test_innodb_lock set b ='xxx' where a=1 and b = 'x';
+同时使用索引字段a（并且索引值同客户端1的值相同）和非索引字段更新另外一条数据；
+结果发现客户端2的update语句被阻塞，需要客户端1提交或回滚才能继续执行。说明，虽然两个事务最终更新的数据不是同一条数据，但然后可能被锁定，这是因为两条SQL语句都使用了相同的索引值（a=1），行级锁上升为页级锁。
+实验二：
+在客户端1执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+回滚实验一的操作；
+在客户端2执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+回滚实验一的操作；
+在客户端1执行：
+mysql> update test_innodb_lock set b ='xxx' where  a = 1 and b = 'a';
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1 Warnings: 0
+同时使用索引字段a和非索引字段b更新一条数据；
+在客户端2执行：
+mysql> update test_innodb_lock set b ='xxx' where a=2 and b = 'b';
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1 Warnings: 0
+同时使用索引字段a（索引值不同于客户端1SQL语句的索引值）和非索引字段b更新一条数据；
+更新顺利进行，执行并没有被阻塞；
+说明，同是根据索引和非索引字段进行更新数据，当两个事务的SQL语句中的索引条件值不一样时，更新仍然能够顺利进行。
+实验三：
+在客户端1执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+回滚实验一的操作；
+在客户端2执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+回滚实验一的操作；
+在客户端1执行：
+mysql> update test_innodb_lock set b ='xxx' where b = 'd';
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1 Warnings: 0
+通过非索引字段更新唯一的一条数据记录，
+在客户端2执行：
+mysql> update test_innodb_lock set b='xxx' where b ='e';
+通过非索引字段更新另外一条唯一的一条数据记录，update语句被阻塞；
+说明，一个事务根据非索引字段更新数据时，InnoDB会将整个表给锁住，行级锁此时上升为表级锁。
+实验四：
+在客户端1执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+回滚实验三的操作；
+在客户端2执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+回滚实验三的操作；
+在客户端1执行：
+mysql> update test_innodb_lock set b ='xxx' where a=4;
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1 Warnings: 0
+只使用索引更新数据记录
+在客户端2执行：
+mysql> update test_innodb_lock set b ='xxx' where a=4;
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1 Warnings: 0
+只使用索引更新数据记录，同时索引值与客户端1的索引值相同（a=4），此时，客户端2的update语句被阻塞。
+说明，这个现象的行级锁，于我们理解的行级锁一致，即真正只是锁定了一条记录。
+实验五：
+在客户端1执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+回滚实验四的操作；
+在客户端2执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+回滚实验四的操作；
+在客户端1执行：
+mysql> update test_innodb_lock set b ='xxx' where a=4;
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1 Warnings: 0
+只使用索引更新数据记录
+在客户端2执行：
+mysql> update test_innodb_lock set b ='xxx' where b=’g’;
+只使用非索引字段更新数据记录，客户端2的update语句被阻塞，这是因为客户端2的update语句由于没有使用索引，需要在数据表上加意向排他锁，但在a=4这条记录上，已经存在排他锁了，索引客户端2的update语句只能被阻塞。
+以上实验说明：
+1、      InnoDB的行级锁在有些情况下是会自动上升为页级锁和表级锁的，此时数据库的写性能会急剧下降，并可能出现大量的死锁（关于死锁的情况，很容易模仿出来，这里不在举例）；
+2、      真正的行级锁，只发生在所有的事务都是通过索引来进行检索数据的。
+下面我们继续实验与间隙锁相关的情况：
+实验六：
+在客户端1执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+回滚实验五的操作；
+在客户端2执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+回滚实验五的操作；
+在客户端1执行：
+mysql> update test_innodb_lock set b ='xxx' where a=8;
+Query OK, 2 rows affected (0.00 sec)
+Rows matched: 2  Changed: 2 Warnings: 0
+通过索引更新数据记录，索引值为8；
+在客户端2执行：
+mysql> insert into test_innodb_lock(a,b)values(8,'xxx');
+向数据表中插入一条数据，插入数据的索引列的值与客户端1的SQL语句的索引值相同，都为8，此时，insert语句被阻塞。
+在客户端1执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+mysql> update test_innodb_lock set b ='xxx' where a=8;
+Query OK, 2 rows affected (0.00 sec)
+Rows matched: 2  Changed: 2 Warnings: 0
+通过索引更新数据记录，索引值为8；
+在客户端2执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+mysql> insert into test_innodb_lock(a,b)values(5,'xxx');
+向数据表中插入一条数据，插入数据的索引列的值小于客户端1的SQL语句的索引值，但大于或等于已有数据记录中最大小于检索索引（a=8）的索引值5，此时，insert语句被阻塞。
+在客户端1执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+mysql> update test_innodb_lock set b ='xxx' where a=8;
+Query OK, 2 rows affected (0.00 sec)
+Rows matched: 2  Changed: 2 Warnings: 0
+通过索引更新数据记录，索引值为8；
+在客户端2执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+mysql> insert into test_innodb_lock(a,b)values(9,'xxx');
+向数据表中插入一条数据，插入数据的索引列的值大于客户端1的SQL语句的索引值，但小于已有数据记录中最小大于检索索引（a=8）的索引值10，此时，insert语句被阻塞。
+在客户端1执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+mysql> update test_innodb_lock set b ='xxx' where a=8;
+Query OK, 2 rows affected (0.00 sec)
+Rows matched: 2  Changed: 2 Warnings: 0
+通过索引更新数据记录，索引值为8；
+在客户端2执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+mysql> insert into test_innodb_lock(a,b)values(10,'xxx');
+向数据表中插入一条数据，插入数据的索引列的值大于客户端1的SQL语句的索引值，且大于或等于已有数据记录中最小大于检索索引（a=8）的索引值10，此时，insert语句顺利执行。
+以上系列的动作说明，当一个事务在通过索引更新数据时，它会将该索引的前后紧紧相邻的索引记录锁住，包括那些根本就不存在的索引值，锁定的区间为左闭右开区间，即[x,y），其中x为小于事务中SQL语句索引值的最大值，y为大于事务中SQL语句索引值的最小值，在本例中，事务中SQL语句索引值为8，索引其锁定的区间为[5,10），所以另外一个事务在做insert操作时，索引值大于或等于5且小于10的索引记录都将被阻塞。需要注意的是，当更新事务的索引值为已有记录中最大值时，这时所有大于该索引值的记录，其他事务的insert操作都将被阻塞。这就是InnoDB间隙锁的具体表现。所以说，InnoDB的间隙锁避免了部分幻读，但不是全部，因为它锁定的是一个区间，而不是整张表。
+实验七：
+在客户端1执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+回滚实验六的操作
+在客户端2执行：
+mysql> rollback;
+Query OK, 0 rows affected (0.00 sec)
+回滚实验六的操作
+在客户端1执行：
+mysql> update test_innodb_lock set b ='xxx' where b=’a’;
+Query OK, 2 rows affected (0.00 sec)
+Rows matched: 2  Changed: 2 Warnings: 0
+通过非索引字段更新一条记录；
+在客户端2执行：
+mysql> insert into test_innodb_lock(a,b)values(10,'xxx');
+插入一条完全不相关的数据，该insert语句被阻塞；
+说明，当事务1通过非索引字段更新一条数据是，整张表就会被锁住，即使是insert操作，也将被阻塞。
+以上实验说明：
+1、InnoDB的间隙锁是可以避免数据出现幻读，但只是避免部分出现幻读，当一个事务是通过索引来更新数据是，另外一个事务在前一个事务索引值前后的左闭右开区间是不能并行插入数据的，必须等待上一个事务提交或回滚；
+2、当前一个事务不是通过索引字段来进行更新操作时，那么InnoDB的这种间隙锁就能够完全避免幻读的出现，因为它会将整个表锁住，在当前事务提交或回滚之前，阻塞所以insert操作。
+说明：
+1、以上实验的所以update操作，更换为delete操作，效果完全一样；
+2、如果修改InnoDB的默认事务隔离级别，由可重复读修改为读已提交，那么以上现象均不会出现，所以这样的锁机制只在可重复读这一事务隔离级别出现，或者说这是InnoDB可重复读事务隔离级别的一种实现方式。
