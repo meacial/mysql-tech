@@ -1,0 +1,17 @@
+InnoDB存储引擎的启动、关闭与恢复
+
+
+关闭innodb_fast_shutdown=
+0 完成所有的full purge和merge insert buffer操作(如：做InnoDB plugin升级时)
+1 默认，不需要完成上述操作，但会刷新缓冲池中的脏页
+2 不完成上述两个操作，而是将日志写入日志文件，下次启动时，会执行恢复操作recovery
+没有正常地关闭数据库(如：kill命令)/innodb_fast_shutdown=2时，需要进行恢复操作。
+
+恢复innodb_force_recovery=
+0 默认，但需要恢复时执行所有恢复操作
+1 忽略检查到的corrupt页
+2 阻止主线程的运行，如主线程需要执行full purge操作，会导致crash
+3 不执行事务回滚操作
+4 不执行插入缓冲的合并操作
+5 不查看撤销日志undo log，InnoDB存储引擎会将所有未提交的事务视为已提交
+6 不执行前滚的操作
