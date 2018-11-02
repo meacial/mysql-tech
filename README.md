@@ -10,6 +10,7 @@
 
 ### INNODB Engine
 - [mysql undo 原理](https://github.com/meacial/mysql-tech/blob/master/docs/mysql%20undo%E5%8E%9F%E7%90%86)
+- [innodb engine recovery](https://github.com/meacial/mysql-tech/blob/master/docs/innodb%20recovery)
 
 
 ### 索引
