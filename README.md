@@ -16,7 +16,7 @@
 - [mysql index](https://github.com/meacial/mysql-tech/blob/master/docs/indexes)
 
 ### 锁（行级锁，列级锁，表级锁，库级锁）
-- [](https://github.com/meacial/mysql-tech/blob/master/docs/locks)
+- [mysql locks](https://github.com/meacial/mysql-tech/blob/master/docs/locks)
 
 
 ### Event and Trigger
