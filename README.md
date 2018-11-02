@@ -12,6 +12,10 @@
 - [mysql undo 原理](https://github.com/meacial/mysql-tech/blob/master/docs/mysql%20undo%E5%8E%9F%E7%90%86)
 
 
+### 索引
+- [mysql ](https://github.com/meacial/mysql-tech/blob/master/docs/indexes)
+
+
 ### Event and Trigger
 #### links
 - [Working with MySQL Events](https://www.sitepoint.com/working-with-mysql-events/)
