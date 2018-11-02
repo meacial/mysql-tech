@@ -15,7 +15,7 @@
 ### 索引
 - [mysql index](https://github.com/meacial/mysql-tech/blob/master/docs/indexes)
 
-### 锁（行级锁，列级锁，表级锁，库级锁）
+### 锁（行级锁，页级锁，表级锁，库级锁）
 - [mysql locks](https://github.com/meacial/mysql-tech/blob/master/docs/locks)
 
 
