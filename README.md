@@ -21,6 +21,11 @@
 - [各种锁的使用场景](https://github.com/meacial/mysql-tech/blob/master/docs/Mysql%E5%85%B1%E4%BA%AB%E9%94%81%E3%80%81%E6%8E%92%E4%BB%96%E9%94%81%E3%80%81%E6%82%B2%E8%A7%82%E9%94%81%E3%80%81%E4%B9%90%E8%A7%82%E9%94%81%E5%8F%8A%E5%85%B6%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF)
 
 
+### MySQL 常用优化参数
+- [innodb variables](https://yq.aliyun.com/articles/59492)
+- [InnoDB Startup Options and System Variables](https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html)
+
+
 ### Event and Trigger
 #### links
 - [Working with MySQL Events](https://www.sitepoint.com/working-with-mysql-events/)
