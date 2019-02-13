@@ -25,6 +25,9 @@
 - [innodb variables](https://yq.aliyun.com/articles/59492)
 - [InnoDB Startup Options and System Variables](https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html)
 
+### MySQL 优化和维护
+- [mysql ops](https://segmentfault.com/a/1190000006158186?utm_source=tag-newest)
+
 
 ### Event and Trigger
 #### links
